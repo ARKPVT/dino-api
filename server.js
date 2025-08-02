@@ -27,6 +27,7 @@ async function getPool() {
     return pool;
 }
 
+// Đăng nhập
 app.post('/api/login', async (req, res) => {
     const { loginEmail, loginPassword } = req.body;
     try {
@@ -45,7 +46,44 @@ app.post('/api/login', async (req, res) => {
             res.json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' });
         }
     } catch (err) {
-        console.error('Lỗi server:', err); // Log chi tiết lên Render
+        console.error('Lỗi server:', err);
+        res.status(500).json({ success: false, message: 'Lỗi server', error: err.message });
+    }
+});
+
+// Đăng ký
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.' });
+    }
+    try {
+        const pool = await getPool();
+
+        // Kiểm tra tài khoản đã tồn tại chưa
+        const checkResult = await pool.request()
+            .input('username', sql.NVarChar, username)
+            .query(`
+                SELECT * FROM [DinoBook].[dbo].[TaiKhoan]
+                WHERE TenDangNhap = @username
+            `);
+
+        if (checkResult.recordset.length > 0) {
+            return res.json({ success: false, message: 'Tên đăng nhập đã tồn tại.' });
+        }
+
+        // Thêm tài khoản mới
+        await pool.request()
+            .input('username', sql.NVarChar, username)
+            .input('password', sql.NVarChar, password)
+            .query(`
+                INSERT INTO [DinoBook].[dbo].[TaiKhoan] (TenDangNhap, MatKhau)
+                VALUES (@username, @password)
+            `);
+
+        res.json({ success: true, message: 'Đăng ký thành công.' });
+    } catch (err) {
+        console.error('Lỗi server:', err);
         res.status(500).json({ success: false, message: 'Lỗi server', error: err.message });
     }
 });
