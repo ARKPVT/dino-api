@@ -36,12 +36,18 @@ app.post('/api/login', async (req, res) => {
             .input('loginEmail', sql.NVarChar, loginEmail)
             .input('loginPassword', sql.NVarChar, loginPassword)
             .query(`
-                SELECT TOP 1 * FROM [DinoBook].[dbo].[TaiKhoan]
+                SELECT TOP (1) [TenNguoiDung], [TenDangNhap], [MatKhau]
+                FROM [DinoBook].[dbo].[TaiKhoan]
                 WHERE TenDangNhap = @loginEmail
                 AND MatKhau = @loginPassword
             `);
         if (result.recordset.length > 0) {
-            res.json({ success: true });
+            const user = result.recordset[0];
+            res.json({ 
+                success: true, 
+                tenNguoiDung: user.TenNguoiDung,
+                tenDangNhap: user.TenDangNhap
+            });
         } else {
             res.json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' });
         }
@@ -53,9 +59,9 @@ app.post('/api/login', async (req, res) => {
 
 // Đăng ký
 app.post('/api/register', async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.' });
+    const { username, password, tenNguoiDung } = req.body;
+    if (!username || !password || !tenNguoiDung) {
+        return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ tên đăng nhập, mật khẩu và tên người dùng.' });
     }
     try {
         const pool = await getPool();
@@ -76,9 +82,10 @@ app.post('/api/register', async (req, res) => {
         await pool.request()
             .input('username', sql.NVarChar, username)
             .input('password', sql.NVarChar, password)
+            .input('tenNguoiDung', sql.NVarChar, tenNguoiDung)
             .query(`
-                INSERT INTO [DinoBook].[dbo].[TaiKhoan] (TenDangNhap, MatKhau)
-                VALUES (@username, @password)
+                INSERT INTO [DinoBook].[dbo].[TaiKhoan] (TenDangNhap, MatKhau, TenNguoiDung)
+                VALUES (@username, @password, @tenNguoiDung)
             `);
 
         res.json({ success: true, message: 'Đăng ký thành công.' });
